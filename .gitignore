@@ -4,3 +4,4 @@
 .vscode/launch.json
 .vscode/ipch
 src/user_config_override.h
+.DS_Store
