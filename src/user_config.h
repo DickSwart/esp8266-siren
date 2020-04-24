@@ -19,6 +19,7 @@
 #define MQTT_SERVER_PORT 1883
 #define MQTT_USERNAME "mqtt_user_name"
 #define MQTT_PASSWORD "mqtt_password"
+#define MQTT_CHECKIN_INTERVAL 60000
 
 #define MQTT_AVAILABILITY_TOPIC_TEMPLATE "%s/status" // MQTT availability: online/offline
 #define MQTT_SENSOR_TOPIC_TEMPLATE "%s/sensor/%s"
@@ -27,6 +28,8 @@
 
 #define MQTT_PAYLOAD_ON "ON"
 #define MQTT_PAYLOAD_OFF "OFF"
+#define MQTT_PAYLOAD_AVAILABLE "online"
+#define MQTT_PAYLOAD_NOT_AVAILABLE "offline"
 
 ///////////////////////////////////////////////////////////////////////////
 //   SIREN
@@ -38,6 +41,6 @@
 //   Over-the-Air update (OTA)
 ///////////////////////////////////////////////////////////////////////////
 #define OTA_HOSTNAME_TEMPLATE "ManCaveSiren_%s"
-#define OTA_PORT 8266  // port 8266 by default
+#define OTA_PORT 8266 // port 8266 by default
 
-#endif  // _USER_CONFIG_H_
+#endif // _USER_CONFIG_H_

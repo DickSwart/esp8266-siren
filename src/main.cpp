@@ -3,7 +3,6 @@
 #include <ESP8266mDNS.h>  //if you get an error here you need to install the ESP8266 board manager
 #include <PubSubClient.h> //https://github.com/knolleary/pubsubclient
 #include <ArduinoOTA.h>   //https://github.com/esp8266/Arduino/tree/master/libraries/ArduinoOTA
-#include <SimpleTimer.h>  //https://github.com/marcelloromani/Arduino-SimpleTimer/tree/master/SimpleTimer
 
 #include <SwartNinjaSW.h>
 
@@ -53,7 +52,7 @@ void setupMQTT();
 void connectToMQTT();
 void checkInMQTT();
 void subscribeToMQTT(char *p_topic);
-void publishToMQTT(char *p_topic, char *p_payload, bool retain = true);
+void publishToMQTT(const char *p_topic, const char *p_payload, bool retain = true);
 void handleMQTTMessage(char *topic, byte *payload, unsigned int length);
 
 // variables declaration
@@ -74,18 +73,14 @@ PubSubClient mqttClient(wifiClient);
 SwartNinjaSW siren(SIREN_PIN);
 
 ///////////////////////////////////////////////////////////////////////////
-//   SimpleTimer
-///////////////////////////////////////////////////////////////////////////
-SimpleTimer timer;
-
-///////////////////////////////////////////////////////////////////////////
 //  MAIN SETUP AND LOOP
 ///////////////////////////////////////////////////////////////////////////
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
 
-  boot == true;
+  boot = true;
   // Set the chip ID
   sprintf(ESP_CHIP_ID, "%06X", ESP.getChipId());
 
@@ -102,7 +97,6 @@ void setup() {
 
   delay(10);
   siren.setup();
-  timer.setInterval(120000, checkInMQTT);
 }
 
 void loop()
@@ -125,8 +119,7 @@ void loop()
 
     // Check WiFi signal
     loopWiFiSensor();
-
-    timer.run();
+    checkInMQTT();
   }
 }
 
@@ -313,19 +306,19 @@ void connectToMQTT()
     if (retries < 150)
     {
       Serial.println("[MQTT]: Attempting MQTT connection...");
-      if (mqttClient.connect(ESP_CHIP_ID, MQTT_USERNAME, MQTT_PASSWORD, MQTT_AVAILABILITY_TOPIC, 0, 1, "offline"))
+      if (mqttClient.connect(ESP_CHIP_ID, MQTT_USERNAME, MQTT_PASSWORD, MQTT_AVAILABILITY_TOPIC, 0, 1, MQTT_PAYLOAD_NOT_AVAILABLE))
       {
 
         Serial.println(F("[MQTT]: The mqttClient is successfully connected to the MQTT broker"));
-        publishToMQTT(MQTT_AVAILABILITY_TOPIC, "online");
-        if (boot == false)
+        publishToMQTT(MQTT_AVAILABILITY_TOPIC, MQTT_PAYLOAD_AVAILABLE, false);
+        if (boot)
+        {
+          Serial.println(F("[MQTT]: Connected"));
+          boot = false;
+        }
+        else
         {
           Serial.println(F("[MQTT]: Reconnected"));
-        }
-        if (boot == true)
-        {
-          Serial.println(F("[MQTT]: Rebooted"));
-          boot == false;
         }
 
         // publish messages
@@ -337,7 +330,7 @@ void connectToMQTT()
       else
       {
         retries++;
-#ifdef DEBUG
+
         Serial.println(F("[MQTT]: ERROR - The connection to the MQTT broker failed"));
         Serial.print(F("[MQTT]: MQTT username: "));
         Serial.println(MQTT_USERNAME);
@@ -347,7 +340,7 @@ void connectToMQTT()
         Serial.println(MQTT_SERVER);
         Serial.print(F("[MQTT]: Retries: "));
         Serial.println(retries);
-#endif
+
         // Wait 5 seconds before retrying
         delay(5000);
       }
@@ -361,8 +354,12 @@ void connectToMQTT()
 
 void checkInMQTT()
 {
-  publishToMQTT(MQTT_AVAILABILITY_TOPIC, "online", false);
-  timer.setTimeout(120000, checkInMQTT);
+  static unsigned long lastCheckIn = 0;
+  if (lastCheckIn + MQTT_CHECKIN_INTERVAL <= millis())
+  {
+    lastCheckIn = millis();
+    publishToMQTT(MQTT_AVAILABILITY_TOPIC, MQTT_PAYLOAD_AVAILABLE, false);
+  }
 }
 
 /*
@@ -385,7 +382,7 @@ void subscribeToMQTT(char *p_topic)
 /*
   Function called to publish to a MQTT topic with the given payload
 */
-void publishToMQTT(char *p_topic, char *p_payload, bool retain)
+void publishToMQTT(const char *p_topic, const char *p_payload, bool retain)
 {
   if (mqttClient.publish(p_topic, p_payload, retain))
   {
